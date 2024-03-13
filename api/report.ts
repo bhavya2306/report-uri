@@ -62,12 +62,23 @@ async function trackCSPReport(cspData) {
     }
 
     const key = (clusterDetails.production) ? clusterDetails.prodSdkKey : clusterDetails.devSdkKey;
+    console.log(clusterDetails);
     const mixpanelInstance = mixpanel.init(key, undefined, "mixpanel-csp-report");
-    mixpanelInstance.track('CSP_REPORT', {
-        ...cspData,
-        clusterId: clusterDetails.clusterId,
-        clusterName: clusterDetails.clusterName,
-        hostAppUrl: cspData.referrer,
+    return new Promise<void>((resolve, reject) => {
+        mixpanelInstance.track('CSP_REPORT', {
+            ...cspData,
+            clusterId: clusterDetails.clusterId,
+            clusterName: clusterDetails.clusterName,
+            hostAppUrl: cspData.referrer,
+        }, (err) => {
+            if (err) {
+                console.error(err);
+                reject(err);
+            } else {
+                console.log('CSP report tracked on Mixpanel');
+                resolve();
+            }
+        });
     });
 }
 
