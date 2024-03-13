@@ -19,7 +19,7 @@ function parseCSPData(headers, body) {
         cspData["user-agent"] = userAgent;
         cspData["immediate-referer"] = referer;
 
-        if (cspData["csp-report"]) {
+        if (body["csp-report"]) {
             cspData["parse"] = "valid";
             cspData["error"] = "";
             cspData["csp-report"] = body["csp-report"];
