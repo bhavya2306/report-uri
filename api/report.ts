@@ -22,7 +22,7 @@ function parseCSPData(headers, body) {
         if (body["csp-report"]) {
             cspData["parse"] = "valid";
             cspData["error"] = "";
-            cspData["csp-report"] = body["csp-report"];
+            Object.assign(cspData, body["csp-report"]);
         }
         else {
             cspData["parse"] = "error";
