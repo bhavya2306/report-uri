@@ -1,3 +1,5 @@
+import 'mixpanel-browser';
+
 export const config = {
     runtime: "experimental-edge",
 };
