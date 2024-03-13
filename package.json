@@ -1,0 +1,19 @@
+{
+  "name": "report-uri",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "vercel dev",
+    "deploy": "vercel deploy --prod",
+    "build": ""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "local-ssl-proxy": "^2.0.5",
+    "typescript": "^5.4.2",
+    "vercel": "^33.5.5"
+  }
+}
