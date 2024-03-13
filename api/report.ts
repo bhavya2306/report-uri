@@ -1,4 +1,4 @@
-import 'mixpanel-browser';
+import * as mixpanel from 'mixpanel-browser';
 
 export const config = {
     runtime: "experimental-edge",
@@ -37,11 +37,48 @@ function parseCSPData(headers, body) {
     return cspData;
 }
 
+const clusterDetailsCache = new Map();
+async function getClusterDetails(documentUri: string): Promise<any> {
+    const url = new URL(documentUri);
+    if (clusterDetailsCache.has(url.origin)) {
+        return clusterDetailsCache.get(documentUri);
+    }
+
+    try {
+        const response = await fetch(`${url.origin}/prism/preauth/info`);
+        const { config } = await response.json();
+        clusterDetailsCache.set(url.origin, config.mixpanelConfig);
+        return config.mixpanelConfig;
+    } catch (e) {
+        console.error(e);
+        return null;
+    }
+}
+
+async function trackCSPReport(cspData) {
+    const clusterDetails = await getClusterDetails(cspData.documentUri);
+    if (!clusterDetails) {
+        return;
+    }
+
+    const key = (clusterDetails.production) ? clusterDetails.prodSdkKey : clusterDetails.devSdkKey;
+    const mixpanelInstance = mixpanel.init(key, undefined, "mixpanel-csp-report");
+    mixpanelInstance.track('CSP_REPORT', {
+        ...cspData,
+        clusterId: clusterDetails.clusterId,
+        clusterName: clusterDetails.clusterName,
+        hostAppUrl: cspData.referrer,
+    });
+}
+
+
 export default async (req) => {
     const body = await req.json();
     console.log("CSP Report received", body);
     var cspData = parseCSPData(req.headers, body);
     console.log(cspData);
+    await trackCSPReport(cspData);
+
     return new Response(JSON.stringify(cspData), {
         status: 200,
         headers: {
