@@ -1,20 +1,18 @@
-import * as mixpanel from 'mixpanel-browser';
+import Mixpanel from 'mixpanel';
+import { VercelRequest, VercelResponse } from '@vercel/node'
 
-export const config = {
-    runtime: "experimental-edge",
-};
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 function parseCSPData(headers, body) {
-    var userAgent = headers.get('user-agent');
-    var referer = headers.get('referer');
-    var xffor = headers.get('x-forwarded-for');
+    var userAgent = headers['user-agent'];
+    var referer = headers['referer'];
+    var xffor = headers['x-forwarded-for'];
     var timestamp = new Date().toISOString();
     var cspData;
 
 
     try {
         cspData = {};
-        cspData["timestamp"] = timestamp;
         cspData["client-ip"] = xffor;
         cspData["user-agent"] = userAgent;
         cspData["immediate-referer"] = referer;
@@ -62,38 +60,42 @@ async function trackCSPReport(cspData) {
     }
 
     const key = (clusterDetails.production) ? clusterDetails.prodSdkKey : clusterDetails.devSdkKey;
-    console.log(clusterDetails);
-    const mixpanelInstance = mixpanel.init(key, undefined, "mixpanel-csp-report");
+    const mixpanel = Mixpanel.init(key);
     return new Promise<void>((resolve, reject) => {
-        mixpanelInstance.track('CSP_REPORT', {
-            ...cspData,
-            clusterId: clusterDetails.clusterId,
-            clusterName: clusterDetails.clusterName,
-            hostAppUrl: cspData.referrer,
-        }, (err) => {
-            if (err) {
-                console.error(err);
-                reject(err);
-            } else {
-                console.log('CSP report tracked on Mixpanel');
+        try {
+            mixpanel.track('csp-report', {
+                ...cspData,
+                clusterId: clusterDetails.clusterId,
+                clusterName: clusterDetails.clusterName,
+                hostAppUrl: cspData.referrer,
+            }, (e) => {
+                if (e) {
+                    console.error(e);
+                    reject(e);
+                }
                 resolve();
-            }
-        });
+                console.log('csp-report tracked');
+            });
+        } catch (e) {
+            console.trace(e);
+            reject(e);
+        }
     });
 }
 
 
-export default async (req) => {
-    const body = await req.json();
-    console.log("CSP Report received", body);
-    var cspData = parseCSPData(req.headers, body);
-    console.log(cspData);
-    await trackCSPReport(cspData);
+export default async (req: VercelRequest, res: VercelResponse) => {
+    const chunks = [];
+    req.on('data', chunk => {
+        chunks.push(chunk);
+    })
 
-    return new Response(JSON.stringify(cspData), {
-        status: 200,
-        headers: {
-            'content-type': 'application/json;charset=UTF-8',
-        }
+    req.on('end', async () => {
+        const data = Buffer.concat(chunks);
+        const body = JSON.parse(data.toString());
+        console.log("CSP Report received", body);
+        var cspData = parseCSPData(req.headers, body);
+        await trackCSPReport(cspData);
+        return res.json(cspData);
     });
 }

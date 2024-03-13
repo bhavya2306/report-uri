@@ -13,11 +13,13 @@
   "license": "ISC",
   "devDependencies": {
     "@types/mixpanel-browser": "^2.49.0",
+    "@vercel/node": "^3.0.22",
     "local-ssl-proxy": "^2.0.5",
     "typescript": "^5.4.2",
     "vercel": "^33.5.5"
   },
   "dependencies": {
+    "mixpanel": "^0.18.0",
     "mixpanel-browser": "^2.49.0"
   }
 }
