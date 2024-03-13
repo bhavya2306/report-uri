@@ -43,7 +43,8 @@ async function getClusterDetails(documentUri: string): Promise<any> {
     }
 
     try {
-        const response = await fetch(`${url.origin}/prism/preauth/info`);
+        console.log(url.origin);
+        const response = await fetch(`${url.origin}/prism/preauth/info`, { signal: AbortSignal.timeout(20000) });
         const { config } = await response.json();
         clusterDetailsCache.set(url.origin, config.mixpanelConfig);
         return config.mixpanelConfig;
@@ -53,20 +54,30 @@ async function getClusterDetails(documentUri: string): Promise<any> {
     }
 }
 
-async function trackCSPReport(cspData) {
-    const clusterDetails = await getClusterDetails(cspData['document-uri']);
-    if (!clusterDetails) {
-        return;
+function getMixpanelKey(clusterDetails, documentUri) {
+    if (clusterDetails) {
+        return (clusterDetails.production) ? clusterDetails.prodSdkKey : clusterDetails.devSdkKey
     }
 
-    const key = (clusterDetails.production) ? clusterDetails.prodSdkKey : clusterDetails.devSdkKey;
+    if (documentUri.includes(':')) {
+        return process.env.MIXPANEL_DEV_KEY;
+    } else {
+        return process.env.MIXPANEL_PROD_KEY;
+    }
+}
+
+async function trackCSPReport(cspData) {
+    const documentUri = cspData['document-uri'];
+    const clusterDetails = await getClusterDetails(documentUri);
+
+    const key = getMixpanelKey(clusterDetails, documentUri);
     const mixpanel = Mixpanel.init(key);
     return new Promise<void>((resolve, reject) => {
         try {
             mixpanel.track('csp-report', {
                 ...cspData,
-                clusterId: clusterDetails.clusterId,
-                clusterName: clusterDetails.clusterName,
+                clusterId: clusterDetails?.clusterId,
+                clusterName: clusterDetails?.clusterName,
                 hostAppUrl: cspData.referrer,
             }, (e) => {
                 if (e) {
