@@ -56,7 +56,7 @@ async function getClusterDetails(documentUri: string): Promise<any> {
 }
 
 async function trackCSPReport(cspData) {
-    const clusterDetails = await getClusterDetails(cspData.documentUri);
+    const clusterDetails = await getClusterDetails(cspData['document-uri']);
     if (!clusterDetails) {
         return;
     }
