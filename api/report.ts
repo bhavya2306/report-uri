@@ -103,7 +103,19 @@ async function trackCSPReport(cspData) {
 
 
 export default async (req: VercelRequest, res: VercelResponse) => {
+    if (req.method === 'OPTIONS') {
+        console.log('Received OPTIONS preflight request. Responding with 204.');
+        // Set necessary headers for CORS that your vercel.json might also handle
+        res.setHeader('Allow', ['POST', 'OPTIONS']);
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+        
+        res.status(204).end();
+        return;
+    }
     const chunks = [];
+    
     req.on('data', chunk => {
         chunks.push(chunk);
     });
